@@ -1,0 +1,48 @@
+pipeline {
+    agent {
+         label 'master' //'maven'
+    }
+    environment 
+    {
+        AWS_REGION = 'eu-west-2'
+        VERSION = "${BUILD_NUMBER}"
+        PROJECT = 'nodeapp'
+        IMAGE = "$PROJECT:$VERSION"
+        //ECRURL = 'https://977122302174.dkr.ecr.eu-west-2.amazonaws.com/node-app'
+        //ECRCRED = 'ecr:eu-west-2:terraform'
+    }  
+    stages{
+        stage('checkout from GIT') {
+            steps {
+                    checkout scm
+                  }
+        }
+    }
+        stage('docker build and push to ecr') {
+            steps {
+                sh(label: 'ECR login and docker push', script:
+                '''
+                    #!/bin/bash         
+                    echo "Authenticate with ECR"
+                    set +x # Don't echo credentials from the login command!
+                    echo "Building New ECR Image"
+                    eval $(aws ecr get-login --region "$AWS_REGION" --no-include-email)
+                    # Enable Debug and Exit immediately 
+                    set -xe
+                    //docker build  -t 123456789101.dkr.ecr.eu-west-1.amazonaws.com/nginx:${GITCOMMIT} .
+                    #two push one for master tag other is git commit ID
+                    //docker push 123456789101.dkr.ecr.eu-west-1.amazonaws.com/nginx:${GITCOMMIT}
+                    //docker tag 123456789101.dkr.ecr.eu-west-1.amazonaws.com/nginx:${GITCOMMIT} 123456789101.dkr.ecr.eu-west-1.amazonaws.com/nginx:latest
+                    //docker push 123456789101.dkr.ecr.eu-west-1.amazonaws.com/nginx:latest
+                    '''.stripIndent())
+                }
+            }
+        stage ('Docker build') {
+            steps{
+                    docker.build('$IMAGE')
+            }                
+        }
+      }
+    }
+  }
+}
